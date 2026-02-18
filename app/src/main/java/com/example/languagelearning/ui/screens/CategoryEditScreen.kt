@@ -21,8 +21,8 @@ import com.example.languagelearning.ui.viewmodel.CategoriesViewModel
 import com.example.languagelearning.ui.viewmodel.CategoryEvent
 import kotlinx.coroutines.launch
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowBack
-import com.example.languagelearning.ui.theme.*
 import com.example.languagelearning.LanguageApp
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -32,7 +32,7 @@ fun CategoryEditScreen(vm: CategoriesViewModel, categoryId: Long, onBack: () -> 
     val repo = application.repository
 
     var name by remember { mutableStateOf("") }
-    var selectedColor by remember { mutableStateOf(0xFFFF8FAB.toInt()) }
+    var selectedColor by remember { mutableIntStateOf(0xFFFF8FAB.toInt()) }
     var foreignLanguage by remember { mutableStateOf("de") }
     var targetLanguage by remember { mutableStateOf("en") }
     var showForeignLangMenu by remember { mutableStateOf(false) }
@@ -53,7 +53,6 @@ fun CategoryEditScreen(vm: CategoriesViewModel, categoryId: Long, onBack: () -> 
         "zh" to "中文"
     )
 
-    // Load user profile to set default target language
     LaunchedEffect(Unit) {
         repo?.getUserProfileSync()?.let { profile ->
             targetLanguage = profile.nativeLanguage
@@ -61,20 +60,19 @@ fun CategoryEditScreen(vm: CategoriesViewModel, categoryId: Long, onBack: () -> 
     }
 
     val colors = listOf(
-        0xFFFFB5BA.toInt(), // pastel pink
-        0xFFFFD6A5.toInt(), // pastel peach
-        0xFFFDFFB6.toInt(), // pastel yellow
-        0xFFCAFFBF.toInt(), // pastel mint
-        0xFFA0C4FF.toInt(), // pastel blue
-        0xFFBDB2FF.toInt(), // pastel lavender
-        0xFFFFC6FF.toInt()  // pastel rose
+        0xFFFFB5BA.toInt(),
+        0xFFFFD6A5.toInt(),
+        0xFFFDFFB6.toInt(),
+        0xFFCAFFBF.toInt(),
+        0xFFA0C4FF.toInt(),
+        0xFFBDB2FF.toInt(),
+        0xFFFFC6FF.toInt()
     )
 
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val isEditing = categoryId != 0L
 
-    // Prefill fields when editing by collecting flow
     val categoryFlow = remember(categoryId) { vm.getCategoryFlow(categoryId) }
     val categoryWithFlashcards by categoryFlow.collectAsState(initial = null)
 
@@ -136,7 +134,7 @@ fun CategoryEditScreen(vm: CategoriesViewModel, categoryId: Long, onBack: () -> 
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Filled.ArrowBack, contentDescription = "Back", tint = MaterialTheme.colorScheme.onPrimary)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = MaterialTheme.colorScheme.onPrimary)
                     }
                     Text(
                         text = if (isEditing) "Edit Category" else "Create Category",

@@ -23,7 +23,6 @@ class CategoriesViewModel(private val repo: LanguageRepository) : ViewModel() {
     private val _isSaving = MutableStateFlow(false)
     val isSaving: StateFlow<Boolean> = _isSaving
 
-    // Use replay=1 so UI collectors don't miss the last emitted event
     val events = MutableSharedFlow<CategoryEvent>(replay = 1)
 
     fun addCategory(name: String, color: Int, foreignLanguage: String = "de", targetLanguage: String = "en") = viewModelScope.launch {
@@ -52,7 +51,6 @@ class CategoriesViewModel(private val repo: LanguageRepository) : ViewModel() {
 
     fun deleteCategory(category: Category) = viewModelScope.launch {
         repo.deleteCategory(category)
-        // emit success after deletion so edit screen can react
         events.emit(CategoryEvent.Success(category.id))
     }
 
@@ -64,9 +62,5 @@ class CategoriesViewModel(private val repo: LanguageRepository) : ViewModel() {
         }
     }
 
-    // suspend helper to load a category by id (call from composable LaunchedEffect)
-    suspend fun getCategoryById(id: Long): Category? = repo.getCategoryById(id)
-
-    // Provide a flow for a single category with relations to be observed in UI
     fun getCategoryFlow(id: Long) = repo.getCategoryWithFlashcards(id)
 }

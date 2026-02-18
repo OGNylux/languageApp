@@ -89,7 +89,6 @@ fun ProfileScreen(
         Spacer(modifier = Modifier.height(24.dp))
 
         if (isEditing) {
-            // Edit Mode
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(20.dp),
@@ -151,7 +150,6 @@ fun ProfileScreen(
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // Theme switch in edit
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,

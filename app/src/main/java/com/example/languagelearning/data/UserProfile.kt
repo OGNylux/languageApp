@@ -5,9 +5,9 @@ import androidx.room.PrimaryKey
 
 @Entity(tableName = "user_profile")
 data class UserProfile(
-    @PrimaryKey val id: Long = 1, // Single profile
+    @PrimaryKey val id: Long = 1,
     val name: String,
-    val nativeLanguage: String, // Language code like "en", "de", etc.
-    val darkMode: Boolean = false // theme preference
+    val nativeLanguage: String,
+    val darkMode: Boolean = false
 )
 

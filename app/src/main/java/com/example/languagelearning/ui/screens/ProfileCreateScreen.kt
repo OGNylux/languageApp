@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
+import androidx.compose.material3.ExposedDropdownMenuBoxScope.menuAnchor
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -50,7 +51,7 @@ fun ProfileCreateScreen(
             modifier = Modifier.fillMaxWidth()
         ) {
             Text(
-                "Welcome! 👋",
+                "Welcome!",
                 style = MaterialTheme.typography.headlineLarge.copy(
                     fontWeight = FontWeight.Bold,
                     fontSize = 36.sp
@@ -104,19 +105,6 @@ fun ProfileCreateScreen(
                         )
                     }
                 }
-            }
-
-            // Theme switch
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Column {
-                    Text("Theme", style = MaterialTheme.typography.bodyLarge)
-                    Text(if (darkMode) "Dark" else "Light", style = MaterialTheme.typography.bodySmall)
-                }
-                Switch(checked = darkMode, onCheckedChange = { darkMode = it })
             }
 
             Spacer(modifier = Modifier.height(8.dp))

@@ -18,6 +18,7 @@ import com.example.languagelearning.ui.viewmodel.FlashcardEvent
 import com.example.languagelearning.ui.viewmodel.FlashcardsViewModel
 import kotlinx.coroutines.launch
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ArrowBack
@@ -57,7 +58,6 @@ fun FlashcardEditScreen(vm: FlashcardsViewModel, flashcardId: Long, categoryId: 
             when (ev) {
                 is FlashcardEvent.Success -> {
                     Log.d("FlashcardEdit", "Flashcard saved id=${ev.id}")
-                    // Navigate back immediately, show a non-blocking snackbar in background
                     onBack()
                     scope.launch {
                         snackbarHostState.showSnackbar("Flashcard saved! ✨")
@@ -84,7 +84,7 @@ fun FlashcardEditScreen(vm: FlashcardsViewModel, flashcardId: Long, categoryId: 
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Filled.ArrowBack, contentDescription = "Back", tint = MaterialTheme.colorScheme.onPrimary)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = MaterialTheme.colorScheme.onPrimary)
                     }
                     Text(
                         text = if (isEditing) "Edit Flashcard" else "Create Flashcard",

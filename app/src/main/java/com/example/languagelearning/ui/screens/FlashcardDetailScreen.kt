@@ -19,10 +19,13 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.example.languagelearning.data.LanguageRepository
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.ui.graphics.vector.ImageVector
+import com.example.languagelearning.ui.theme.AppYellow
 import kotlinx.coroutines.launch
 
 @Composable
@@ -48,7 +51,7 @@ fun FlashcardDetailScreen(repository: LanguageRepository, flashcardId: Long, onB
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Filled.ArrowBack, contentDescription = "Back", tint = MaterialTheme.colorScheme.onPrimary)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = MaterialTheme.colorScheme.onPrimary)
                     }
                     Text(
                         text = flashcard?.word ?: "Flashcard",
@@ -64,11 +67,13 @@ fun FlashcardDetailScreen(repository: LanguageRepository, flashcardId: Long, onB
                             }
                         }
                     }) {
-                        // Use simple star emoji to avoid missing icon variants across icon packs
-                        Text(
-                            text = if (flashcard?.isBookmarked == true) "★" else "☆",
-                            fontSize = 20.sp,
-                            color = if (flashcard?.isBookmarked == true) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onPrimary
+                        val icon: ImageVector = Icons.Filled.Star
+                        val tint = if (flashcard?.isBookmarked == true) AppYellow else MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.6f)
+                        Icon(
+                            imageVector = icon,
+                            contentDescription = "Bookmark",
+                            tint = tint,
+                            modifier = Modifier.size(24.dp)
                         )
                     }
                 }

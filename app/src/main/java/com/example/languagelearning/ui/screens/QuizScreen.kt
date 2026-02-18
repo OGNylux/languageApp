@@ -3,24 +3,27 @@ package com.example.languagelearning.ui.screens
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.languagelearning.ui.theme.AppYellow
 import com.example.languagelearning.ui.viewmodel.QuizViewModel
 
 @Composable
@@ -43,7 +46,7 @@ fun QuizScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Filled.ArrowBack, contentDescription = "Back", tint = MaterialTheme.colorScheme.onPrimary)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = MaterialTheme.colorScheme.onPrimary)
                     }
                     Text(
                         text = "Quiz",
@@ -116,7 +119,6 @@ fun QuizQuestionScreen(
         verticalArrangement = Arrangement.SpaceBetween
     ) {
         Column {
-            // Question with Bookmark
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(20.dp),
@@ -141,10 +143,13 @@ fun QuizQuestionScreen(
                             modifier = Modifier.weight(1f)
                         )
                         IconButton(onClick = onToggleBookmark) {
-                            Text(
-                                text = if (flashcard.isBookmarked) "★" else "☆",
-                                fontSize = 24.sp,
-                                color = if (flashcard.isBookmarked) Color(0xFFFFD700) else MaterialTheme.colorScheme.onPrimaryContainer
+                            val icon: ImageVector = Icons.Filled.Star
+                            val tint = if (flashcard.isBookmarked) AppYellow else MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.6f)
+                            Icon(
+                                imageVector = icon,
+                                contentDescription = "Bookmark",
+                                tint = tint,
+                                modifier = Modifier.size(24.dp)
                             )
                         }
                     }
@@ -153,7 +158,6 @@ fun QuizQuestionScreen(
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            // Feedback
             AnimatedVisibility(
                 visible = hasAnswered,
                 enter = fadeIn(),
@@ -180,7 +184,7 @@ fun QuizQuestionScreen(
                         )
                         Spacer(modifier = Modifier.width(12.dp))
                         Text(
-                            text = if (isCorrect) "Correct! 🎉" else "Incorrect. The answer is: $correctAnswer",
+                            text = if (isCorrect) "Correct!" else "Incorrect. The answer is: $correctAnswer",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.SemiBold,
                             color = Color.White
@@ -191,7 +195,6 @@ fun QuizQuestionScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Options
             options.forEach { option ->
                 AnswerOption(
                     text = option,
@@ -205,7 +208,6 @@ fun QuizQuestionScreen(
             }
         }
 
-        // Next button
         if (hasAnswered) {
             Button(
                 onClick = onNext,

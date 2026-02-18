@@ -1,7 +1,6 @@
 package com.example.languagelearning.ui.screens
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -16,18 +15,18 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.languagelearning.data.Category
 import com.example.languagelearning.data.LanguageRepository
+import com.example.languagelearning.util.languageName
 import kotlinx.coroutines.flow.first
 
 @Composable
 fun QuizzesScreen(
     repository: LanguageRepository,
-    onQuizStart: (Long, String) -> Unit // categoryId, mode
+    onQuizStart: (Long, String) -> Unit
 ) {
     val categories by repository.getAllCategories().collectAsState(initial = emptyList())
 
-    // Group categories by language pair
-    val groupedCategories = categories.groupBy {
-        "${it.foreignLanguage} → ${it.targetLanguage}"
+    val groupedCategories = categories.groupBy { cat ->
+        languageName(cat.foreignLanguage)
     }
 
     Column(
@@ -78,9 +77,9 @@ fun CategoryQuizCard(
     repository: LanguageRepository,
     onQuizStart: (Long, String) -> Unit
 ) {
-    var totalCount by remember { mutableStateOf(0) }
-    var bookmarkedCount by remember { mutableStateOf(0) }
-    var recallCount by remember { mutableStateOf(0) }
+    var totalCount by remember { mutableIntStateOf(0) }
+    var bookmarkedCount by remember { mutableIntStateOf(0) }
+    var recallCount by remember { mutableIntStateOf(0) }
 
     LaunchedEffect(category.id) {
         val flashcards = repository.getFlashcardsForCategory(category.id).first()
@@ -194,4 +193,3 @@ fun QuizModeButton(
         }
     }
 }
-

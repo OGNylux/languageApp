@@ -4,7 +4,6 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.languagelearning.data.Flashcard
-import com.example.languagelearning.data.FlashcardWithRelations
 import com.example.languagelearning.data.LanguageRepository
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -15,7 +14,6 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeout
-import kotlinx.coroutines.flow.firstOrNull
 
 sealed class FlashcardEvent {
     data class Success(val id: Long) : FlashcardEvent()
@@ -26,7 +24,6 @@ class FlashcardsViewModel(private val repo: LanguageRepository, private val cate
     val flashcards: StateFlow<List<Flashcard>> = repo.getFlashcardsForCategory(categoryId).map { it }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
     val events = MutableSharedFlow<FlashcardEvent>(replay = 1)
-
     private val _isSaving = MutableStateFlow(false)
     val isSaving: StateFlow<Boolean> = _isSaving
 
@@ -51,7 +48,7 @@ class FlashcardsViewModel(private val repo: LanguageRepository, private val cate
                     withTimeout(TIMEOUT_MS) {
                         repo.translate(word, sourceLang, targetLang)
                     }
-                } catch (e: TimeoutCancellationException) {
+                } catch (_: TimeoutCancellationException) {
                     Log.e("FlashcardsVM", "translation timed out for '$word'")
                     throw Exception("Translation timed out")
                 }
@@ -66,7 +63,7 @@ class FlashcardsViewModel(private val repo: LanguageRepository, private val cate
 
             val flashcard = Flashcard(categoryId = categoryId, word = word, translation = translated)
             val id = repo.insertFlashcard(flashcard)
-            Log.d("FlashcardsVM", "inserted flashcard id=$id with translation=${translated ?: "null"}")
+            Log.d("FlashcardsVM", "inserted flashcard id=$id with translation=${translated}")
 
             for (ex in exampleSentences) {
                 repo.insertExample(com.example.languagelearning.data.ExampleSentence(flashcardId = id, text = ex))
@@ -78,60 +75,15 @@ class FlashcardsViewModel(private val repo: LanguageRepository, private val cate
 
             events.emit(FlashcardEvent.Success(id))
         } catch (e: Exception) {
-            //Log.e("FlashcardsVM", "addFlashcard failed", e)
             events.emit(FlashcardEvent.Error(e.message ?: "Failed to add flashcard"))
         } finally {
             _isSaving.value = false
         }
     }
 
-    fun updateFlashcard(flashcard: Flashcard, fetchTranslation: Boolean = false) = viewModelScope.launch {
-        val category = _category.value
-        val sourceLang = category?.foreignLanguage ?: "de"
-        val targetLang = category?.targetLanguage ?: "en"
-
-        try {
-            if (fetchTranslation) {
-                Log.d("FlashcardsVM", "updateFlashcard: requesting translation for '${flashcard.word}'")
-                _isSaving.value = true
-            }
-
-            val updated = if (fetchTranslation) {
-                val t = try { repo.translate(flashcard.word, sourceLang, targetLang) } catch (e: Exception) {
-                    Log.d("FlashcardsVM", "updateFlashcard: translation failed: ${e.message}")
-                    flashcard.translation
-                }
-                flashcard.copy(translation = t)
-            } else flashcard
-
-            repo.updateFlashcard(updated)
-            Log.d("FlashcardsVM", "updateFlashcard: updated flashcard id=${flashcard.id} translation='${updated.translation}'")
-            events.emit(FlashcardEvent.Success(flashcard.id))
-        } catch (e: Exception) {
-            Log.e("FlashcardsVM", "updateFlashcard failed", e)
-            events.emit(FlashcardEvent.Error(e.message ?: "Failed to update flashcard"))
-        } finally {
-            if (fetchTranslation) _isSaving.value = false
-        }
-    }
-
     fun deleteFlashcard(flashcard: Flashcard) = viewModelScope.launch { repo.deleteFlashcard(flashcard) }
 
-    fun deleteAllFlashcards() = viewModelScope.launch {
-        try {
-            repo.deleteAllFlashcardsForCategory(categoryId)
-        } catch (e: Exception) {
-            Log.e("FlashcardsVM", "deleteAllFlashcards failed", e)
-        }
-    }
-
-    // Expose flow for single flashcard with relations
     fun getFlashcardWithRelationsFlow(id: Long) = repo.getFlashcardWithRelations(id)
-
-    // helper to get single FlashcardWithRelations once (suspend)
-    suspend fun getFlashcardWithRelationsOnce(id: Long): FlashcardWithRelations? {
-        return repo.getFlashcardWithRelations(id).firstOrNull()
-    }
 
     fun updateFlashcardWithRelations(flashcard: Flashcard, examples: List<String>, tags: List<String>, fetchTranslation: Boolean = false) = viewModelScope.launch {
         val category = _category.value
@@ -140,17 +92,15 @@ class FlashcardsViewModel(private val repo: LanguageRepository, private val cate
 
         try {
             _isSaving.value = true
-            // possibly update translation first
             val updatedFlashcard = if (fetchTranslation) {
-                val t = try { repo.translate(flashcard.word, sourceLang, targetLang) } catch (e: Exception) { flashcard.translation }
+                val t = try { repo.translate(flashcard.word, sourceLang, targetLang) } catch (_: Exception) { flashcard.translation }
                 flashcard.copy(translation = t)
             } else flashcard
 
             repo.updateFlashcard(updatedFlashcard)
-            // replace examples
             repo.deleteExamplesForFlashcard(flashcard.id)
             for (ex in examples) repo.insertExample(com.example.languagelearning.data.ExampleSentence(flashcardId = flashcard.id, text = ex))
-            // replace tags
+
             repo.clearTagsForFlashcard(flashcard.id)
             for (tagName in tags) {
                 val tag = repo.getOrCreateTagByName(tagName)

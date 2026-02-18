@@ -30,7 +30,6 @@ interface FlashcardDao {
     @Query("DELETE FROM flashcard_tag_crossref WHERE flashcardId = :flashcardId")
     suspend fun clearTagsForFlashcard(flashcardId: Long)
 
-    // Clear translations that look like HTML pages (e.g., responses saved when API returned HTML)
     @Query("UPDATE flashcards SET translation = NULL WHERE translation LIKE '<%' OR translation LIKE '%<html%'")
     suspend fun clearHtmlTranslations()
 

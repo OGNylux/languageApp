@@ -59,7 +59,6 @@ class QuizViewModel(
                 return@launch
             }
 
-            // Get all translations for options
             val allTranslations = repository.getFlashcardsForCategory(categoryId).first()
                 .mapNotNull { it.translation }
                 .distinct()
@@ -116,15 +115,12 @@ class QuizViewModel(
 
     fun nextQuestion() {
         viewModelScope.launch {
-            // First, hide the feedback by resetting hasAnswered
             _quizState.value = _quizState.value.copy(
                 hasAnswered = false
             )
 
-            // Wait for fade out animation to complete
             delay(200)
 
-            // Then reset other states and show next question
             currentIndex++
             _quizState.value = _quizState.value.copy(
                 selectedAnswer = null,
@@ -141,7 +137,6 @@ class QuizViewModel(
             val updated = flashcard.copy(isBookmarked = !flashcard.isBookmarked)
             repository.updateFlashcard(updated)
 
-            // Update the current question with the new bookmark state
             _quizState.value = _quizState.value.copy(
                 currentQuestion = current.copy(flashcard = updated)
             )

@@ -14,7 +14,7 @@ data class Flashcard(
     val word: String,
     val translation: String? = null,
     val isBookmarked: Boolean = false,
-    val incorrectCount: Int = 0, // Number of times answered incorrectly
-    val lastIncorrectTimestamp: Long = 0 // When it was last answered incorrectly
+    val incorrectCount: Int = 0,
+    val lastIncorrectTimestamp: Long = 0
 )
 

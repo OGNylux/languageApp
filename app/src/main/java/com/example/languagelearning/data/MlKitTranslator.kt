@@ -10,7 +10,7 @@ import com.google.mlkit.nl.translate.Translator
 import com.google.mlkit.nl.translate.TranslatorOptions
 import kotlinx.coroutines.tasks.await
 
-class MlKitTranslator(private val context: Context) {
+class MlKitTranslator() {
     private var translator: Translator? = null
     private var currentSource: String? = null
     private var currentTarget: String? = null
@@ -20,7 +20,6 @@ class MlKitTranslator(private val context: Context) {
             translator?.close()
         } catch (_: Exception) { }
 
-        // Map language codes to ML Kit TranslateLanguage constants
         val sourceCode = mapLanguageCode(sourceLang)
         val targetCode = mapLanguageCode(targetLang)
 
@@ -62,13 +61,12 @@ class MlKitTranslator(private val context: Context) {
 
     private fun mapLanguageCode(langCode: String): String {
         val code = langCode.lowercase()
-        // First try TranslateLanguage.fromLanguageTag for wider compatibility
         try {
             TranslateLanguage.fromLanguageTag(code)?.let { return it }
         } catch (_: Exception) { }
 
         return when (code) {
-            "auto" -> TranslateLanguage.GERMAN // Default fallback; callers should prefer detectLanguage
+            "auto" -> TranslateLanguage.GERMAN
             "en" -> TranslateLanguage.ENGLISH
             "de" -> TranslateLanguage.GERMAN
             "es" -> TranslateLanguage.SPANISH
