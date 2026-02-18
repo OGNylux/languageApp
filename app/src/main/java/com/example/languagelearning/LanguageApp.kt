@@ -21,7 +21,7 @@ class LanguageApp : Application() {
         super.onCreate()
         applicationScope.launch(Dispatchers.IO) {
             val db = AppDatabase.getDatabase(this@LanguageApp)
-            val mlKitTranslator = MlKitTranslator(this@LanguageApp)
+            val mlKitTranslator = MlKitTranslator()
             val repoInstance = LanguageRepository(db, mlKit = mlKitTranslator)
             repository = repoInstance
         }

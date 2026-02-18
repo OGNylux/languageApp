@@ -22,7 +22,6 @@ import com.example.languagelearning.ui.viewmodel.CategoryEvent
 import kotlinx.coroutines.launch
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.ArrowBack
 import com.example.languagelearning.LanguageApp
 
 @OptIn(ExperimentalMaterial3Api::class)

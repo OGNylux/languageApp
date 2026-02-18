@@ -22,7 +22,6 @@ import androidx.compose.ui.unit.dp
 import com.example.languagelearning.data.LanguageRepository
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.example.languagelearning.ui.theme.AppYellow

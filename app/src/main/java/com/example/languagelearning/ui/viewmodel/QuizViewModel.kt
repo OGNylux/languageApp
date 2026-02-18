@@ -2,7 +2,6 @@ package com.example.languagelearning.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.languagelearning.data.Category
 import com.example.languagelearning.data.Flashcard
 import com.example.languagelearning.data.LanguageRepository
 import kotlinx.coroutines.flow.*

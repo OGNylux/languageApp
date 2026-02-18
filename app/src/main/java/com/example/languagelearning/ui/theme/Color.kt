@@ -3,7 +3,7 @@ package com.example.languagelearning.ui.theme
 import androidx.compose.ui.graphics.Color
 
 val AppGreen = Color(0xFF00BFA5)      // cooler teal-green
-val AppGreenDark = Color(0xFF00A086)  // slightly darker accent
+// val AppGreenDark = Color(0xFF00A086)  // slightly darker accent
 val AppGreenLight = Color(0xFF66EFD6) // lighter accent
 
 val AppYellow = Color(0xFFFFC107)     // warm yellow for accents

@@ -1,6 +1,5 @@
 package com.example.languagelearning.data
 
-import android.content.Context
 import android.util.Log
 import com.google.mlkit.common.model.DownloadConditions
 import com.google.mlkit.nl.languageid.LanguageIdentification
