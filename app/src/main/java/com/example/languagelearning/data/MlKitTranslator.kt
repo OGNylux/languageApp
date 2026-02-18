@@ -20,11 +20,9 @@ class MlKitTranslator(private val context: Context) {
             translator?.close()
         } catch (_: Exception) { }
 
-        val sourceCode = when (sourceLang) {
-            "auto" -> TranslateLanguage.GERMAN
-            else -> TranslateLanguage.fromLanguageTag(sourceLang) ?: sourceLang
-        }
-        val targetCode = TranslateLanguage.fromLanguageTag(targetLang) ?: targetLang
+        // Map language codes to ML Kit TranslateLanguage constants
+        val sourceCode = mapLanguageCode(sourceLang)
+        val targetCode = mapLanguageCode(targetLang)
 
         Log.d("MlKitTranslator", "prepareTranslator called with sourceLang='$sourceLang' targetLang='$targetLang' -> resolved $sourceCode -> $targetCode")
 
@@ -47,6 +45,63 @@ class MlKitTranslator(private val context: Context) {
         } catch (e: Exception) {
             Log.w("MlKitTranslator", "Model download failed: ${e.message}")
             false
+        }
+    }
+
+    suspend fun detectLanguage(text: String): String? {
+        return try {
+            val id = LanguageIdentification.getClient()
+            val tag = id.identifyLanguage(text).await()
+            Log.d("MlKitTranslator", "detectLanguage: text='$text' detected='$tag'")
+            if (tag == "und") null else tag
+        } catch (e: Exception) {
+            Log.w("MlKitTranslator", "detectLanguage failed: ${e.message}")
+            null
+        }
+    }
+
+    private fun mapLanguageCode(langCode: String): String {
+        val code = langCode.lowercase()
+        // First try TranslateLanguage.fromLanguageTag for wider compatibility
+        try {
+            TranslateLanguage.fromLanguageTag(code)?.let { return it }
+        } catch (_: Exception) { }
+
+        return when (code) {
+            "auto" -> TranslateLanguage.GERMAN // Default fallback; callers should prefer detectLanguage
+            "en" -> TranslateLanguage.ENGLISH
+            "de" -> TranslateLanguage.GERMAN
+            "es" -> TranslateLanguage.SPANISH
+            "fr" -> TranslateLanguage.FRENCH
+            "it" -> TranslateLanguage.ITALIAN
+            "pt" -> TranslateLanguage.PORTUGUESE
+            "ru" -> TranslateLanguage.RUSSIAN
+            "ja" -> TranslateLanguage.JAPANESE
+            "ko" -> TranslateLanguage.KOREAN
+            "zh" -> TranslateLanguage.CHINESE
+            "ar" -> TranslateLanguage.ARABIC
+            "nl" -> TranslateLanguage.DUTCH
+            "pl" -> TranslateLanguage.POLISH
+            "tr" -> TranslateLanguage.TURKISH
+            "sv" -> TranslateLanguage.SWEDISH
+            "da" -> TranslateLanguage.DANISH
+            "fi" -> TranslateLanguage.FINNISH
+            "no" -> TranslateLanguage.NORWEGIAN
+            "cs" -> TranslateLanguage.CZECH
+            "sk" -> TranslateLanguage.SLOVAK
+            "bg" -> TranslateLanguage.BULGARIAN
+            "ro" -> TranslateLanguage.ROMANIAN
+            "hu" -> TranslateLanguage.HUNGARIAN
+            "uk" -> TranslateLanguage.UKRAINIAN
+            "el" -> TranslateLanguage.GREEK
+            "he" -> TranslateLanguage.HEBREW
+            "hi" -> TranslateLanguage.HINDI
+            "th" -> TranslateLanguage.THAI
+            "vi" -> TranslateLanguage.VIETNAMESE
+            else -> {
+                Log.w("MlKitTranslator", "Unknown language code: $langCode, defaulting to ENGLISH")
+                TranslateLanguage.ENGLISH
+            }
         }
     }
 

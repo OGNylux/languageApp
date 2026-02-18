@@ -26,10 +26,10 @@ class CategoriesViewModel(private val repo: LanguageRepository) : ViewModel() {
     // Use replay=1 so UI collectors don't miss the last emitted event
     val events = MutableSharedFlow<CategoryEvent>(replay = 1)
 
-    fun addCategory(name: String, color: Int) = viewModelScope.launch {
+    fun addCategory(name: String, color: Int, foreignLanguage: String = "de", targetLanguage: String = "en") = viewModelScope.launch {
         _isSaving.value = true
         try {
-            val id = repo.insertCategory(Category(name = name, color = color))
+            val id = repo.insertCategory(Category(name = name, color = color, foreignLanguage = foreignLanguage, targetLanguage = targetLanguage))
             events.emit(CategoryEvent.Success(id))
         } catch (e: Exception) {
             events.emit(CategoryEvent.Error(e.message ?: "Failed to add category"))
@@ -38,10 +38,10 @@ class CategoriesViewModel(private val repo: LanguageRepository) : ViewModel() {
         }
     }
 
-    fun updateCategory(id: Long, name: String, color: Int) = viewModelScope.launch {
+    fun updateCategory(id: Long, name: String, color: Int, foreignLanguage: String = "de", targetLanguage: String = "en") = viewModelScope.launch {
         _isSaving.value = true
         try {
-            repo.updateCategory(Category(id = id, name = name, color = color))
+            repo.updateCategory(Category(id = id, name = name, color = color, foreignLanguage = foreignLanguage, targetLanguage = targetLanguage))
             events.emit(CategoryEvent.Success(id))
         } catch (e: Exception) {
             events.emit(CategoryEvent.Error(e.message ?: "Failed to update category"))

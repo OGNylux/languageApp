@@ -2,6 +2,12 @@ package com.example.languagelearning.ui
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -14,14 +20,20 @@ import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.languagelearning.LanguageApp
-import com.example.languagelearning.ui.viewmodel.CategoriesViewModel
-import com.example.languagelearning.ui.viewmodel.FlashcardsViewModel
+import com.example.languagelearning.ui.viewmodel.*
+import androidx.compose.foundation.isSystemInDarkTheme
+import com.example.languagelearning.ui.theme.LanguageLearningTheme
 
 enum class Routes(val route: String) {
+    ProfileCreate("profile/create"),
     Categories("categories"),
+    Quizzes("quizzes"),
+    Profile("profile"),
+    Quiz("quiz/{categoryId}/{mode}"),
     CategoryEdit("category/edit/{categoryId}"),
     Flashcards("flashcards/{categoryId}"),
     FlashcardDetail("flashcard/{flashcardId}"),
@@ -44,88 +56,203 @@ fun LanguageAppUI(modifier: Modifier = Modifier, navController: NavHostControlle
     // Non-null repository from here on
     val safeRepo = repo
 
-    NavHost(navController = navController, startDestination = Routes.Categories.route, modifier = modifier) {
-        composable(Routes.Categories.route) {
-            val factory = object : ViewModelProvider.Factory {
-                override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                    @Suppress("UNCHECKED_CAST")
-                    return CategoriesViewModel(safeRepo) as T
-                }
-            }
-            val vm: CategoriesViewModel = viewModel(factory = factory)
-            com.example.languagelearning.ui.screens.CategoriesScreen(vm = vm, onOpenCategory = { id -> navController.navigate("flashcards/$id") }, onCreate = { navController.navigate("category/edit/0") })
+    // Check if profile exists to determine start destination
+    val profileFactory = object : ViewModelProvider.Factory {
+        override fun <T : ViewModel> create(modelClass: Class<T>): T {
+            @Suppress("UNCHECKED_CAST")
+            return ProfileViewModel(safeRepo) as T
         }
+    }
+    val profileViewModel: ProfileViewModel = viewModel(factory = profileFactory)
+    val profile by profileViewModel.profile.collectAsState()
 
-        composable(Routes.Flashcards.route, listOf(navArgument("categoryId") { type = NavType.LongType })) { backStack ->
-            val id = backStack.arguments?.getLong("categoryId") ?: 0L
-            val factory = object : ViewModelProvider.Factory {
-                override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                    @Suppress("UNCHECKED_CAST")
-                    return FlashcardsViewModel(safeRepo, id) as T
-                }
-            }
-            val vm: FlashcardsViewModel = viewModel(factory = factory)
+    // Determine theme preference from profile or system
+    val darkPref = profile?.darkMode ?: isSystemInDarkTheme()
 
-            var categoryName by remember { mutableStateOf("Flashcards") }
-            LaunchedEffect(id) {
-                safeRepo.getCategoryById(id)?.let { categoryName = it.name }
-            }
-
-            com.example.languagelearning.ui.screens.FlashcardsScreen(
-                vm = vm,
-                onBack = { navController.popBackStack() },
-                onOpen = { fid -> navController.navigate("flashcard/$fid") },
-                onCreate = { navController.navigate("flashcard/edit/0/$id") },
-                onEditCategory = { navController.navigate("category/edit/$id") },
-                onEdit = { fid -> navController.navigate("flashcard/edit/$fid/$id") },
-                categoryName = categoryName
+    // Wrap entire app content in theme determined by profile
+    LanguageLearningTheme(darkTheme = darkPref) {
+        // Wait for profile check
+        if (profile == null) {
+            com.example.languagelearning.ui.screens.ProfileCreateScreen(
+                vm = profileViewModel,
+                onProfileCreated = { /* nav handled by LanguageAppUI after creation */ }
             )
+            return@LanguageLearningTheme
         }
 
-        composable(Routes.FlashcardDetail.route, listOf(navArgument("flashcardId") { type = NavType.LongType })) { backStack ->
-            val fid = backStack.arguments?.getLong("flashcardId") ?: 0L
-            com.example.languagelearning.ui.screens.FlashcardDetailScreen(repository = safeRepo, flashcardId = fid, onBack = { navController.popBackStack() })
-        }
+        // Main app with bottom navigation
+        val navBackStackEntry by navController.currentBackStackEntryAsState()
+        val currentRoute = navBackStackEntry?.destination?.route
 
-        composable(Routes.FlashcardEdit.route, listOf(navArgument("flashcardId") { type = NavType.LongType }, navArgument("categoryId") { type = NavType.LongType })) { backStack ->
-            val fid = backStack.arguments?.getLong("flashcardId") ?: 0L
-            val catId = backStack.arguments?.getLong("categoryId") ?: 0L
-            val factory = object : ViewModelProvider.Factory {
-                override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                    @Suppress("UNCHECKED_CAST")
-                    return FlashcardsViewModel(safeRepo, catId) as T
-                }
-            }
-            val vm: FlashcardsViewModel = viewModel(factory = factory)
-            com.example.languagelearning.ui.screens.FlashcardEditScreen(vm = vm, flashcardId = fid, categoryId = catId, onBack = {
-                // Try to pop back to the flashcards list for this category if it exists in the back stack.
-                val targetRoute = "flashcards/$catId"
-                val popped = navController.popBackStack(targetRoute, false)
-                if (!popped) {
-                    // If not found in backstack, navigate to it directly (replace behavior minimized by launchSingleTop)
-                    navController.navigate(targetRoute) {
-                        launchSingleTop = true
-                        // keep categories on back stack
-                        popUpTo(Routes.Categories.route) { inclusive = false }
+        // Routes that should show bottom bar
+        val bottomBarRoutes = listOf(Routes.Categories.route, Routes.Quizzes.route, Routes.Profile.route)
+        val showBottomBar = currentRoute in bottomBarRoutes
+
+        Scaffold(
+            bottomBar = {
+                if (showBottomBar) {
+                    NavigationBar {
+                        NavigationBarItem(
+                            icon = { Icon(Icons.Filled.Home, contentDescription = "Categories") },
+                            label = { Text("Categories") },
+                            selected = currentRoute == Routes.Categories.route,
+                            onClick = {
+                                navController.navigate(Routes.Categories.route) {
+                                    popUpTo(Routes.Categories.route) { inclusive = true }
+                                    launchSingleTop = true
+                                }
+                            }
+                        )
+                        NavigationBarItem(
+                            icon = { Icon(Icons.Filled.Star, contentDescription = "Quizzes") },
+                            label = { Text("Quizzes") },
+                            selected = currentRoute == Routes.Quizzes.route,
+                            onClick = {
+                                navController.navigate(Routes.Quizzes.route) {
+                                    popUpTo(Routes.Categories.route)
+                                    launchSingleTop = true
+                                }
+                            }
+                        )
+                        NavigationBarItem(
+                            icon = { Icon(Icons.Filled.Person, contentDescription = "Profile") },
+                            label = { Text("Profile") },
+                            selected = currentRoute == Routes.Profile.route,
+                            onClick = {
+                                navController.navigate(Routes.Profile.route) {
+                                    popUpTo(Routes.Categories.route)
+                                    launchSingleTop = true
+                                }
+                            }
+                        )
                     }
                 }
-            })
-        }
+            }
+        ) { paddingValues ->
+            NavHost(
+                navController = navController,
+                startDestination = Routes.Categories.route,
+                modifier = modifier.padding(paddingValues)
+            ) {
 
-        composable(Routes.CategoryEdit.route, listOf(navArgument("categoryId") { type = NavType.LongType })) { backStack ->
-            val id = backStack.arguments?.getLong("categoryId") ?: 0L
-            val factory = object : ViewModelProvider.Factory {
-                override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                    @Suppress("UNCHECKED_CAST")
-                    return CategoriesViewModel(safeRepo) as T
+                composable(Routes.Categories.route) {
+                    val factory = object : ViewModelProvider.Factory {
+                        override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                            @Suppress("UNCHECKED_CAST")
+                            return CategoriesViewModel(safeRepo) as T
+                        }
+                    }
+                    val vm: CategoriesViewModel = viewModel(factory = factory)
+                    com.example.languagelearning.ui.screens.CategoriesScreen(vm = vm, onOpenCategory = { id -> navController.navigate("flashcards/$id") }, onCreate = { navController.navigate("category/edit/0") })
+                }
+
+                composable(Routes.Quizzes.route) {
+                    com.example.languagelearning.ui.screens.QuizzesScreen(
+                        repository = safeRepo,
+                        onQuizStart = { categoryId, mode ->
+                            navController.navigate("quiz/$categoryId/$mode")
+                        }
+                    )
+                }
+
+                composable(Routes.Profile.route) {
+                    com.example.languagelearning.ui.screens.ProfileScreen(vm = profileViewModel)
+                }
+
+                composable(Routes.Quiz.route, listOf(
+                    navArgument("categoryId") { type = NavType.LongType },
+                    navArgument("mode") { type = NavType.StringType }
+                )) { backStack ->
+                    val categoryId = backStack.arguments?.getLong("categoryId") ?: 0L
+                    val modeStr = backStack.arguments?.getString("mode") ?: "RANDOM"
+                    val mode = when (modeStr) {
+                        "BOOKMARKED" -> QuizMode.BOOKMARKED
+                        "RECALL" -> QuizMode.RECALL
+                        else -> QuizMode.RANDOM
+                    }
+
+                    val factory = object : ViewModelProvider.Factory {
+                        override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                            @Suppress("UNCHECKED_CAST")
+                            return QuizViewModel(safeRepo, categoryId, mode) as T
+                        }
+                    }
+                    val vm: QuizViewModel = viewModel(factory = factory)
+                    com.example.languagelearning.ui.screens.QuizScreen(vm = vm, onBack = { navController.popBackStack() })
+                }
+
+                composable(Routes.Flashcards.route, listOf(navArgument("categoryId") { type = NavType.LongType })) { backStack ->
+                    val id = backStack.arguments?.getLong("categoryId") ?: 0L
+                    val factory = object : ViewModelProvider.Factory {
+                        override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                            @Suppress("UNCHECKED_CAST")
+                            return FlashcardsViewModel(safeRepo, id) as T
+                        }
+                    }
+                    val vm: FlashcardsViewModel = viewModel(factory = factory)
+
+                    var categoryName by remember { mutableStateOf("Flashcards") }
+                    LaunchedEffect(id) {
+                        safeRepo.getCategoryById(id)?.let { categoryName = it.name }
+                    }
+
+                    com.example.languagelearning.ui.screens.FlashcardsScreen(
+                        vm = vm,
+                        onBack = { navController.popBackStack() },
+                        onOpen = { fid -> navController.navigate("flashcard/$fid") },
+                        onCreate = { navController.navigate("flashcard/edit/0/$id") },
+                        onEditCategory = { navController.navigate("category/edit/$id") },
+                        onEdit = { fid -> navController.navigate("flashcard/edit/$fid/$id") },
+                        categoryName = categoryName
+                    )
+                }
+
+                composable(Routes.FlashcardDetail.route, listOf(navArgument("flashcardId") { type = NavType.LongType })) { backStack ->
+                    val fid = backStack.arguments?.getLong("flashcardId") ?: 0L
+                    com.example.languagelearning.ui.screens.FlashcardDetailScreen(repository = safeRepo, flashcardId = fid, onBack = { navController.popBackStack() })
+                }
+
+                composable(Routes.FlashcardEdit.route, listOf(navArgument("flashcardId") { type = NavType.LongType }, navArgument("categoryId") { type = NavType.LongType })) { backStack ->
+                    val fid = backStack.arguments?.getLong("flashcardId") ?: 0L
+                    val catId = backStack.arguments?.getLong("categoryId") ?: 0L
+                    val factory = object : ViewModelProvider.Factory {
+                        override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                            @Suppress("UNCHECKED_CAST")
+                            return FlashcardsViewModel(safeRepo, catId) as T
+                        }
+                    }
+                    val vm: FlashcardsViewModel = viewModel(factory = factory)
+                    com.example.languagelearning.ui.screens.FlashcardEditScreen(vm = vm, flashcardId = fid, categoryId = catId, onBack = {
+                        // Try to pop back to the flashcards list for this category if it exists in the back stack.
+                        val targetRoute = "flashcards/$catId"
+                        val popped = navController.popBackStack(targetRoute, false)
+                        if (!popped) {
+                            // If not found in backstack, navigate to it directly (replace behavior minimized by launchSingleTop)
+                            navController.navigate(targetRoute) {
+                                launchSingleTop = true
+                                // keep categories on back stack
+                                popUpTo(Routes.Categories.route) { inclusive = false }
+                            }
+                        }
+                    })
+                }
+
+                composable(Routes.CategoryEdit.route, listOf(navArgument("categoryId") { type = NavType.LongType })) { backStack ->
+                    val id = backStack.arguments?.getLong("categoryId") ?: 0L
+                    val factory = object : ViewModelProvider.Factory {
+                        override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                            @Suppress("UNCHECKED_CAST")
+                            return CategoriesViewModel(safeRepo) as T
+                        }
+                    }
+                    val vm: CategoriesViewModel = viewModel(factory = factory)
+                    com.example.languagelearning.ui.screens.CategoryEditScreen(vm = vm, categoryId = id, onBack = {
+                        navController.navigate(Routes.Categories.route) {
+                            popUpTo(Routes.Categories.route) { inclusive = false }
+                        }
+                    })
                 }
             }
-            val vm: CategoriesViewModel = viewModel(factory = factory)
-            com.example.languagelearning.ui.screens.CategoryEditScreen(vm = vm, categoryId = id, onBack = {
-                navController.navigate(Routes.Categories.route) {
-                    popUpTo(Routes.Categories.route) { inclusive = false }
-                }
-            })
         }
     }
 }

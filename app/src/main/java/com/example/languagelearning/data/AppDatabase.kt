@@ -9,10 +9,11 @@ import com.example.languagelearning.data.dao.ExampleSentenceDao
 import com.example.languagelearning.data.dao.FlashcardDao
 import com.example.languagelearning.data.dao.TagDao
 import com.example.languagelearning.data.dao.TranslationDao
+import com.example.languagelearning.data.dao.UserProfileDao
 
 @Database(
-    entities = [Category::class, Flashcard::class, ExampleSentence::class, Tag::class, FlashcardTagCrossRef::class, TranslationEntity::class],
-    version = 2,
+    entities = [Category::class, Flashcard::class, ExampleSentence::class, Tag::class, FlashcardTagCrossRef::class, TranslationEntity::class, UserProfile::class],
+    version = 5,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -21,6 +22,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun exampleSentenceDao(): ExampleSentenceDao
     abstract fun tagDao(): TagDao
     abstract fun translationDao(): TranslationDao
+    abstract fun userProfileDao(): UserProfileDao
 
     companion object {
         @Volatile

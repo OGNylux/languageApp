@@ -200,7 +200,7 @@ private fun FlashcardCard(card: Flashcard, onClick: () -> Unit, onEdit: () -> Un
                 )
             }
             IconButton(onClick = onEdit) {
-                Icon(Icons.Filled.Edit, contentDescription = "Edit", tint = MaterialTheme.colorScheme.secondary)
+                Icon(Icons.Filled.Edit, contentDescription = "Edit", tint = MaterialTheme.colorScheme.primary)
             }
             IconButton(onClick = onDelete) {
                 Icon(Icons.Filled.Delete, contentDescription = "Delete", tint = MaterialTheme.colorScheme.error)

@@ -7,6 +7,8 @@ import androidx.room.PrimaryKey
 data class Category(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val name: String,
-    val color: Int
+    val color: Int,
+    val foreignLanguage: String = "de", // Language you're learning from (e.g., "de" for German)
+    val targetLanguage: String = "en"  // Language to translate to (e.g., "en" for English)
 )
 

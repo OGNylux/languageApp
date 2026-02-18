@@ -16,12 +16,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.languagelearning.ui.viewmodel.FlashcardEvent
 import com.example.languagelearning.ui.viewmodel.FlashcardsViewModel
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.ArrowBack
 
 @Composable
 fun FlashcardEditScreen(vm: FlashcardsViewModel, flashcardId: Long, categoryId: Long, onBack: () -> Unit) {
@@ -271,7 +270,7 @@ fun FlashcardEditScreen(vm: FlashcardsViewModel, flashcardId: Long, categoryId: 
                         )
                         if (idx == 0) {
                             IconButton(onClick = { tagInputs.add("") }) {
-                                Icon(Icons.Filled.Add, contentDescription = "Add", tint = MaterialTheme.colorScheme.secondary)
+                                Icon(Icons.Filled.Add, contentDescription = "Add", tint = MaterialTheme.colorScheme.primary)
                             }
                         } else {
                             IconButton(onClick = { tagInputs.removeAt(idx) }) {

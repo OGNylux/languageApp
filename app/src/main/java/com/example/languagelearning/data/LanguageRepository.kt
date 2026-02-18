@@ -10,6 +10,11 @@ class LanguageRepository(
     private val db: AppDatabase,
     private val mlKit: MlKitTranslator? = null
 ) {
+    // User Profile
+    fun getUserProfile() = db.userProfileDao().getProfile()
+    suspend fun getUserProfileSync(): UserProfile? = db.userProfileDao().getProfileSync()
+    suspend fun insertOrUpdateProfile(profile: UserProfile) = db.userProfileDao().insert(profile)
+
     // Categories
     fun getAllCategories(): Flow<List<Category>> = db.categoryDao().getAllCategories()
     suspend fun insertCategory(category: Category): Long = db.categoryDao().insert(category)
@@ -38,9 +43,9 @@ class LanguageRepository(
     suspend fun clearTagsForFlashcard(flashcardId: Long) = db.flashcardDao().clearTagsForFlashcard(flashcardId)
     fun getTagsForFlashcard(flashcardId: Long): Flow<List<Tag>> = db.tagDao().getTagsForFlashcard(flashcardId)
 
-    suspend fun translate(word: String, target: String = "en"): String {
+    suspend fun translate(word: String, sourceLang: String = "de", targetLang: String = "en"): String {
         val dao = db.translationDao()
-        val cached = dao.get(word, "auto", target)
+        val cached = dao.get(word, sourceLang, targetLang)
         val ttlMs = TimeUnit.DAYS.toMillis(30)
         if (cached != null && System.currentTimeMillis() - cached.timestamp < ttlMs) {
             Log.d("LanguageRepo", "translate: cache hit for '$word' -> '${cached.translatedText}'")
@@ -56,15 +61,30 @@ class LanguageRepository(
         val TOTAL_TIMEOUT_MS = 10_000L
 
         try {
-            val src = "de"
+            val (resolvedSource, resolvedTarget) = try {
+                var src = sourceLang
+                // If source is 'auto', try to detect language first
+                if (src.equals("auto", ignoreCase = true)) {
+                    val detected = try { mlKit.detectLanguage(word) } catch (e: Exception) {
+                        Log.w("LanguageRepo", "language detect threw: ${e.message}")
+                        null
+                    }
+                    if (!detected.isNullOrBlank()) src = detected
+                    Log.d("LanguageRepo", "translate: auto-detected source='$src' for word='$word'")
+                }
+                src to targetLang
+            } catch (e: Exception) {
+                Log.w("LanguageRepo", "resolve langs threw: ${e.message}")
+                sourceLang to targetLang
+            }
 
             val translated = try {
                 withTimeout(TOTAL_TIMEOUT_MS) {
-                    val prepared = try { mlKit.prepareTranslator(src, target, requireWifi = false) } catch (e: Exception) {
+                    val prepared = try { mlKit.prepareTranslator(resolvedSource, resolvedTarget, requireWifi = false) } catch (e: Exception) {
                         Log.w("LanguageRepo", "prepareTranslator threw: ${e.message}")
                         false
                     }
-                    if (!prepared) throw Exception("ML Kit model not available for $src -> $target")
+                    if (!prepared) throw Exception("ML Kit model not available for $resolvedSource -> $resolvedTarget")
 
                     val out = mlKit.translate(word)
                     out
@@ -76,7 +96,7 @@ class LanguageRepository(
 
             Log.d("LanguageRepo", "translate: ML Kit result for '$word' -> '$translated'")
             // cache and return
-            dao.insert(TranslationEntity(source = word, sourceLang = src, targetLang = target, translatedText = translated, timestamp = System.currentTimeMillis()))
+            dao.insert(TranslationEntity(source = word, sourceLang = resolvedSource, targetLang = resolvedTarget, translatedText = translated, timestamp = System.currentTimeMillis()))
             return translated
         } catch (e: Exception) {
             Log.e("LanguageRepo", "translate: ML Kit translation failed for '$word': ${e.message}")

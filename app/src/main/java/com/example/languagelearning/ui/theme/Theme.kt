@@ -10,33 +10,33 @@ import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
-private val CuteDarkColorScheme = darkColorScheme(
-    primary = CutePrimaryNight,
-    secondary = CuteSecondaryNight,
-    tertiary = CuteTertiary,
-    background = CuteBackgroundNight,
-    surface = CuteSurfaceNight,
-    onPrimary = CuteOnPrimaryNight,
-    onSecondary = CuteOnBackgroundNight,
-    onTertiary = CuteOnSurfaceNight,
-    onBackground = CuteOnBackgroundNight,
-    onSurface = CuteOnSurfaceNight,
-    error = CuteError
+private val AppDarkColorScheme = darkColorScheme(
+    primary = AppPrimaryNight,
+    secondary = AppSecondaryNight,
+    tertiary = AppTertiary,
+    background = AppBackgroundNight,
+    surface = AppSurfaceNight,
+    onPrimary = AppOnPrimaryNight,
+    onSecondary = AppOnBackgroundNight,
+    onTertiary = AppOnSurfaceNight,
+    onBackground = AppOnBackgroundNight,
+    onSurface = AppOnSurfaceNight,
+    error = AppError
 )
 
-private val CuteLightColorScheme = lightColorScheme(
-    primary = CutePrimary,
-    secondary = CuteSecondary,
-    tertiary = CuteTertiary,
-    background = CuteBackground,
-    surface = CuteSurface,
-    surfaceVariant = CuteSurfaceVariant,
-    onPrimary = CuteOnPrimary,
-    onSecondary = CuteOnBackground,
-    onTertiary = CuteOnSurface,
-    onBackground = CuteOnBackground,
-    onSurface = CuteOnSurface,
-    error = CuteError
+private val AppLightColorScheme = lightColorScheme(
+    primary = AppPrimary,
+    secondary = AppSecondary,
+    tertiary = AppTertiary,
+    background = AppBackground,
+    surface = AppSurface,
+    surfaceVariant = AppSurfaceVariant,
+    onPrimary = AppOnPrimary,
+    onSecondary = AppOnBackground,
+    onTertiary = AppOnSurface,
+    onBackground = AppOnBackground,
+    onSurface = AppOnSurface,
+    error = AppError
 )
 
 @Composable
@@ -44,7 +44,7 @@ fun LanguageLearningTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit
 ) {
-    val colorScheme = if (darkTheme) CuteDarkColorScheme else CuteLightColorScheme
+    val colorScheme = if (darkTheme) AppDarkColorScheme else AppLightColorScheme
 
     val view = LocalView.current
     if (!view.isInEditMode) {

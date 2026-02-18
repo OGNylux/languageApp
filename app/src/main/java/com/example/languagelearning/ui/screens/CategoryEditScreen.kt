@@ -4,6 +4,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -14,18 +16,49 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.LocalContext
 import com.example.languagelearning.ui.viewmodel.CategoriesViewModel
 import com.example.languagelearning.ui.viewmodel.CategoryEvent
 import kotlinx.coroutines.launch
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import com.example.languagelearning.ui.theme.*
+import com.example.languagelearning.LanguageApp
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CategoryEditScreen(vm: CategoriesViewModel, categoryId: Long, onBack: () -> Unit) {
+    val application = LocalContext.current.applicationContext as LanguageApp
+    val repo = application.repository
+
     var name by remember { mutableStateOf("") }
     var selectedColor by remember { mutableStateOf(0xFFFF8FAB.toInt()) }
+    var foreignLanguage by remember { mutableStateOf("de") }
+    var targetLanguage by remember { mutableStateOf("en") }
+    var showForeignLangMenu by remember { mutableStateOf(false) }
+    var showTargetLangMenu by remember { mutableStateOf(false) }
+
     val isSaving by vm.isSaving.collectAsState(initial = false)
+
+    val languages = listOf(
+        "en" to "English",
+        "de" to "Deutsch",
+        "es" to "Español",
+        "fr" to "Français",
+        "it" to "Italiano",
+        "pt" to "Português",
+        "ru" to "Русский",
+        "ja" to "日本語",
+        "ko" to "한국어",
+        "zh" to "中文"
+    )
+
+    // Load user profile to set default target language
+    LaunchedEffect(Unit) {
+        repo?.getUserProfileSync()?.let { profile ->
+            targetLanguage = profile.nativeLanguage
+        }
+    }
 
     val colors = listOf(
         0xFFFFB5BA.toInt(), // pastel pink
@@ -49,6 +82,8 @@ fun CategoryEditScreen(vm: CategoriesViewModel, categoryId: Long, onBack: () -> 
         categoryWithFlashcards?.let { existing ->
             name = existing.category.name
             selectedColor = existing.category.color
+            foreignLanguage = existing.category.foreignLanguage
+            targetLanguage = existing.category.targetLanguage
         }
     }
 
@@ -143,7 +178,8 @@ fun CategoryEditScreen(vm: CategoriesViewModel, categoryId: Long, onBack: () -> 
                     Button(
                         onClick = {
                             if (name.isNotBlank() && !isSaving) {
-                                if (isEditing) vm.updateCategory(categoryId, name, selectedColor) else vm.addCategory(name, selectedColor)
+                                if (isEditing) vm.updateCategory(categoryId, name, selectedColor, foreignLanguage, targetLanguage)
+                                else vm.addCategory(name, selectedColor, foreignLanguage, targetLanguage)
                             }
                         },
                         modifier = Modifier.fillMaxWidth(),
@@ -164,6 +200,7 @@ fun CategoryEditScreen(vm: CategoriesViewModel, categoryId: Long, onBack: () -> 
                 .padding(innerPadding)
                 .padding(20.dp)
                 .fillMaxSize()
+                .verticalScroll(rememberScrollState())
         ) {
             Text(
                 text = "Category Name",
@@ -183,6 +220,90 @@ fun CategoryEditScreen(vm: CategoriesViewModel, categoryId: Long, onBack: () -> 
                     unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
                 )
             )
+
+            Spacer(modifier = Modifier.height(28.dp))
+            Text(
+                text = "Foreign Language (Learning From)",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onBackground
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            ExposedDropdownMenuBox(
+                expanded = showForeignLangMenu,
+                onExpandedChange = { showForeignLangMenu = it }
+            ) {
+                OutlinedTextField(
+                    value = languages.find { it.first == foreignLanguage }?.second ?: "Deutsch",
+                    onValueChange = {},
+                    readOnly = true,
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = showForeignLangMenu) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .menuAnchor(),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+                    )
+                )
+                ExposedDropdownMenu(
+                    expanded = showForeignLangMenu,
+                    onDismissRequest = { showForeignLangMenu = false }
+                ) {
+                    languages.forEach { (code, label) ->
+                        DropdownMenuItem(
+                            text = { Text(label) },
+                            onClick = {
+                                foreignLanguage = code
+                                showForeignLangMenu = false
+                            }
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
+            Text(
+                text = "Target Language (Translate To)",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onBackground
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            ExposedDropdownMenuBox(
+                expanded = showTargetLangMenu,
+                onExpandedChange = { showTargetLangMenu = it }
+            ) {
+                OutlinedTextField(
+                    value = languages.find { it.first == targetLanguage }?.second ?: "English",
+                    onValueChange = {},
+                    readOnly = true,
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = showTargetLangMenu) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .menuAnchor(),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+                    )
+                )
+                ExposedDropdownMenu(
+                    expanded = showTargetLangMenu,
+                    onDismissRequest = { showTargetLangMenu = false }
+                ) {
+                    languages.forEach { (code, label) ->
+                        DropdownMenuItem(
+                            text = { Text(label) },
+                            onClick = {
+                                targetLanguage = code
+                                showTargetLangMenu = false
+                            }
+                        )
+                    }
+                }
+            }
 
             Spacer(modifier = Modifier.height(28.dp))
             Text(

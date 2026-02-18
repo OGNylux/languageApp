@@ -19,9 +19,11 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.languagelearning.data.LanguageRepository
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import kotlinx.coroutines.launch
 
 @Composable
 fun FlashcardDetailScreen(repository: LanguageRepository, flashcardId: Long, onBack: () -> Unit) {
@@ -29,6 +31,7 @@ fun FlashcardDetailScreen(repository: LanguageRepository, flashcardId: Long, onB
     val examples by repository.getExamplesForFlashcard(flashcardId).collectAsState(initial = emptyList())
     val flashcardTags by repository.getTagsForFlashcard(flashcardId).collectAsState(initial = emptyList())
     var showTranslation by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
 
     val flashcard = flashcardWithRelations?.flashcard
 
@@ -54,6 +57,20 @@ fun FlashcardDetailScreen(repository: LanguageRepository, flashcardId: Long, onB
                         color = MaterialTheme.colorScheme.onPrimary,
                         modifier = Modifier.weight(1f)
                     )
+                    IconButton(onClick = {
+                        flashcard?.let { fc ->
+                            scope.launch {
+                                repository.updateFlashcard(fc.copy(isBookmarked = !fc.isBookmarked))
+                            }
+                        }
+                    }) {
+                        // Use simple star emoji to avoid missing icon variants across icon packs
+                        Text(
+                            text = if (flashcard?.isBookmarked == true) "★" else "☆",
+                            fontSize = 20.sp,
+                            color = if (flashcard?.isBookmarked == true) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onPrimary
+                        )
+                    }
                 }
             }
         },
@@ -107,7 +124,7 @@ fun FlashcardDetailScreen(repository: LanguageRepository, flashcardId: Long, onB
                     .animateContentSize(),
                 shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = if (showTranslation) MaterialTheme.colorScheme.secondary.copy(alpha = 0.15f) else MaterialTheme.colorScheme.surfaceVariant
+                    containerColor = if (showTranslation) MaterialTheme.colorScheme.primary.copy(alpha = 0.12f) else MaterialTheme.colorScheme.surfaceVariant
                 )
             ) {
                 Row(
@@ -168,7 +185,7 @@ fun FlashcardDetailScreen(repository: LanguageRepository, flashcardId: Long, onB
                                     modifier = Modifier
                                         .size(28.dp)
                                         .clip(CircleShape)
-                                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)),
+                                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Text(
@@ -227,8 +244,8 @@ fun FlashcardDetailScreen(repository: LanguageRepository, flashcardId: Long, onB
                                 )
                             },
                             colors = AssistChipDefaults.assistChipColors(
-                                containerColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.15f),
-                                labelColor = MaterialTheme.colorScheme.secondary
+                                containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+                                labelColor = MaterialTheme.colorScheme.primary
                             ),
                             border = null
                         )

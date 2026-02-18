@@ -75,8 +75,6 @@ fun CategoriesScreen(vm: CategoriesViewModel, onOpenCategory: (Long) -> Unit, on
                     verticalArrangement = Arrangement.Center,
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Text("📚", style = MaterialTheme.typography.displayLarge)
-                    Spacer(modifier = Modifier.height(16.dp))
                     Text(
                         "No categories yet",
                         style = MaterialTheme.typography.titleLarge,

@@ -30,14 +30,26 @@ class FlashcardsViewModel(private val repo: LanguageRepository, private val cate
     private val _isSaving = MutableStateFlow(false)
     val isSaving: StateFlow<Boolean> = _isSaving
 
-    fun addFlashcard(word: String, exampleSentences: List<String>, tags: List<String>, targetLang: String = "en") = viewModelScope.launch {
+    private val _category = MutableStateFlow<com.example.languagelearning.data.Category?>(null)
+
+    init {
+        viewModelScope.launch {
+            _category.value = repo.getCategoryById(categoryId)
+        }
+    }
+
+    fun addFlashcard(word: String, exampleSentences: List<String>, tags: List<String>) = viewModelScope.launch {
         _isSaving.value = true
+        val category = _category.value
+        val sourceLang = category?.foreignLanguage ?: "de"
+        val targetLang = category?.targetLanguage ?: "en"
+
         try {
             val translated = try {
                 val TIMEOUT_MS = 15_000L
                 val result = try {
                     withTimeout(TIMEOUT_MS) {
-                        repo.translate(word, targetLang)
+                        repo.translate(word, sourceLang, targetLang)
                     }
                 } catch (e: TimeoutCancellationException) {
                     Log.e("FlashcardsVM", "translation timed out for '$word'")
@@ -73,7 +85,11 @@ class FlashcardsViewModel(private val repo: LanguageRepository, private val cate
         }
     }
 
-    fun updateFlashcard(flashcard: Flashcard, fetchTranslation: Boolean = false, targetLang: String = "en") = viewModelScope.launch {
+    fun updateFlashcard(flashcard: Flashcard, fetchTranslation: Boolean = false) = viewModelScope.launch {
+        val category = _category.value
+        val sourceLang = category?.foreignLanguage ?: "de"
+        val targetLang = category?.targetLanguage ?: "en"
+
         try {
             if (fetchTranslation) {
                 Log.d("FlashcardsVM", "updateFlashcard: requesting translation for '${flashcard.word}'")
@@ -81,7 +97,7 @@ class FlashcardsViewModel(private val repo: LanguageRepository, private val cate
             }
 
             val updated = if (fetchTranslation) {
-                val t = try { repo.translate(flashcard.word, targetLang) } catch (e: Exception) {
+                val t = try { repo.translate(flashcard.word, sourceLang, targetLang) } catch (e: Exception) {
                     Log.d("FlashcardsVM", "updateFlashcard: translation failed: ${e.message}")
                     flashcard.translation
                 }
@@ -117,12 +133,16 @@ class FlashcardsViewModel(private val repo: LanguageRepository, private val cate
         return repo.getFlashcardWithRelations(id).firstOrNull()
     }
 
-    fun updateFlashcardWithRelations(flashcard: Flashcard, examples: List<String>, tags: List<String>, fetchTranslation: Boolean = false, targetLang: String = "en") = viewModelScope.launch {
+    fun updateFlashcardWithRelations(flashcard: Flashcard, examples: List<String>, tags: List<String>, fetchTranslation: Boolean = false) = viewModelScope.launch {
+        val category = _category.value
+        val sourceLang = category?.foreignLanguage ?: "de"
+        val targetLang = category?.targetLanguage ?: "en"
+
         try {
             _isSaving.value = true
             // possibly update translation first
             val updatedFlashcard = if (fetchTranslation) {
-                val t = try { repo.translate(flashcard.word, targetLang) } catch (e: Exception) { flashcard.translation }
+                val t = try { repo.translate(flashcard.word, sourceLang, targetLang) } catch (e: Exception) { flashcard.translation }
                 flashcard.copy(translation = t)
             } else flashcard
 
