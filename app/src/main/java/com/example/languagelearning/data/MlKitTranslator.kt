@@ -22,12 +22,11 @@ class MlKitTranslator() {
         val sourceCode = mapLanguageCode(sourceLang)
         val targetCode = mapLanguageCode(targetLang)
 
-        Log.d("MlKitTranslator", "prepareTranslator called with sourceLang='$sourceLang' targetLang='$targetLang' -> resolved $sourceCode -> $targetCode")
-
         val options = TranslatorOptions.Builder()
             .setSourceLanguage(sourceCode)
             .setTargetLanguage(targetCode)
             .build()
+
         translator = Translation.getClient(options)
         currentSource = sourceCode
         currentTarget = targetCode
@@ -37,24 +36,11 @@ class MlKitTranslator() {
         val conditions = conditionsBuilder.build()
 
         return try {
-            translator!!.downloadModelIfNeeded(conditions).await()
-            Log.d("MlKitTranslator", "Model downloaded for $sourceCode -> $targetCode")
+            translator?.downloadModelIfNeeded(conditions)?.await()
             true
         } catch (e: Exception) {
             Log.w("MlKitTranslator", "Model download failed: ${e.message}")
             false
-        }
-    }
-
-    suspend fun detectLanguage(text: String): String? {
-        return try {
-            val id = LanguageIdentification.getClient()
-            val tag = id.identifyLanguage(text).await()
-            Log.d("MlKitTranslator", "detectLanguage: text='$text' detected='$tag'")
-            if (tag == "und") null else tag
-        } catch (e: Exception) {
-            Log.w("MlKitTranslator", "detectLanguage failed: ${e.message}")
-            null
         }
     }
 
@@ -65,7 +51,6 @@ class MlKitTranslator() {
         } catch (_: Exception) { }
 
         return when (code) {
-            "auto" -> TranslateLanguage.GERMAN
             "en" -> TranslateLanguage.ENGLISH
             "de" -> TranslateLanguage.GERMAN
             "es" -> TranslateLanguage.SPANISH
@@ -103,14 +88,14 @@ class MlKitTranslator() {
     }
 
     suspend fun translate(text: String): String {
-        val t = translator ?: throw IllegalStateException("Translator not prepared")
-        Log.d("MlKitTranslator", "translate called with text='$text' using $currentSource -> $currentTarget")
+        val t = translator
+        if (t == null) {
+            Log.e("MlKitTranslator", "translate called but translator is not initialized")
+            throw IllegalStateException("Translator not initialized. Call prepareTranslator() first.")
+        }
+
         return try {
             val out = t.translate(text).await()
-            Log.d("MlKitTranslator", "translate returned='$out' (len=${out?.length ?: 0}) for input='$text'")
-            if (out.equals(text, ignoreCase = true)) {
-                Log.w("MlKitTranslator", "Translated text equals input — possible model/language mismatch or missing model")
-            }
             out
         } catch (e: Exception) {
             Log.e("MlKitTranslator", "translate failed: ${e.message}")

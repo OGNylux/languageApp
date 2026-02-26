@@ -1,6 +1,7 @@
 package com.example.languagelearning.data
 
 import android.util.Log
+import androidx.room.withTransaction
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.TimeoutCancellationException
@@ -28,78 +29,64 @@ class LanguageRepository(
     fun getFlashcardWithRelations(id: Long) = db.flashcardDao().getFlashcardWithRelations(id)
     suspend fun insertFlashcard(flashcard: Flashcard): Long = db.flashcardDao().insert(flashcard)
     suspend fun updateFlashcard(flashcard: Flashcard) = db.flashcardDao().update(flashcard)
+
+    suspend fun updateFlashcardWithDetails(flashcard: Flashcard, examples: List<String>, tags: List<String>) {
+        db.withTransaction {
+            db.flashcardDao().update(flashcard)
+
+            db.exampleSentenceDao().deleteForFlashcard(flashcard.id)
+            examples.forEach {
+                db.exampleSentenceDao().insert(ExampleSentence(flashcardId = flashcard.id, text = it))
+            }
+
+            db.flashcardDao().clearTagsForFlashcard(flashcard.id)
+            tags.forEach { tagName ->
+                val tag = getOrCreateTagByName(tagName)
+                db.flashcardDao().insertCrossRef(FlashcardTagCrossRef(flashcardId = flashcard.id, tagId = tag.id))
+            }
+        }
+    }
+
     suspend fun deleteFlashcard(flashcard: Flashcard) = db.flashcardDao().delete(flashcard)
     suspend fun deleteAllFlashcardsForCategory(categoryId: Long) = db.flashcardDao().deleteAllForCategory(categoryId)
 
     // Example sentences
     fun getExamplesForFlashcard(flashcardId: Long): Flow<List<ExampleSentence>> = db.exampleSentenceDao().getByFlashcard(flashcardId)
     suspend fun insertExample(example: ExampleSentence): Long = db.exampleSentenceDao().insert(example)
-    suspend fun deleteExamplesForFlashcard(flashcardId: Long) = db.exampleSentenceDao().deleteForFlashcard(flashcardId)
-
-    // Tags
-    fun getAllTags(): Flow<List<Tag>> = db.tagDao().getAllTags()
-    suspend fun insertTag(tag: Tag): Long = db.tagDao().insert(tag)
     suspend fun insertTagCrossRef(crossRef: FlashcardTagCrossRef) = db.flashcardDao().insertCrossRef(crossRef)
-    suspend fun clearTagsForFlashcard(flashcardId: Long) = db.flashcardDao().clearTagsForFlashcard(flashcardId)
     fun getTagsForFlashcard(flashcardId: Long): Flow<List<Tag>> = db.tagDao().getTagsForFlashcard(flashcardId)
 
-    suspend fun translate(word: String, sourceLang: String = "de", targetLang: String = "en"): String {
-        val dao = db.translationDao()
-        val cached = dao.get(word, sourceLang, targetLang)
-        val ttlMs = TimeUnit.DAYS.toMillis(30)
-        if (cached != null && System.currentTimeMillis() - cached.timestamp < ttlMs) {
-            Log.d("LanguageRepo", "translate: cache hit for '$word' -> '${cached.translatedText}'")
-            return cached.translatedText
+    suspend fun translate(
+        word: String,
+        sourceLang: String = "de",
+        targetLang: String = "en"
+    ): String = withTimeout(10_000L) {
+        val mlKit = mlKit ?: throw Exception("ML Kit translator not available").also {
+            Log.e("LanguageRepo", it.message!!)
         }
-
-        if (mlKit == null) {
-            val msg = "ML Kit translator not available"
-            Log.e("LanguageRepo", msg)
-            throw Exception(msg)
-        }
-
-        val TOTAL_TIMEOUT_MS = 10_000L
 
         try {
-            val (resolvedSource, resolvedTarget) = try {
-                var src = sourceLang
-                // If source is 'auto', try to detect language first
-                if (src.equals("auto", ignoreCase = true)) {
-                    val detected = try { mlKit.detectLanguage(word) } catch (e: Exception) {
-                        Log.w("LanguageRepo", "language detect threw: ${e.message}")
-                        null
-                    }
-                    if (!detected.isNullOrBlank()) src = detected
-                    Log.d("LanguageRepo", "translate: auto-detected source='$src' for word='$word'")
-                }
-                src to targetLang
-            } catch (e: Exception) {
-                Log.w("LanguageRepo", "resolve langs threw: ${e.message}")
-                sourceLang to targetLang
-            }
+            val isReady = mlKit.prepareTranslator(sourceLang, targetLang, requireWifi = false)
+            if (!isReady) throw Exception("ML Kit model not available for $sourceLang -> $targetLang")
 
-            val translated = try {
-                withTimeout(TOTAL_TIMEOUT_MS) {
-                    val prepared = try { mlKit.prepareTranslator(resolvedSource, resolvedTarget, requireWifi = false) } catch (e: Exception) {
-                        Log.w("LanguageRepo", "prepareTranslator threw: ${e.message}")
-                        false
-                    }
-                    if (!prepared) throw Exception("ML Kit model not available for $resolvedSource -> $resolvedTarget")
+            val translated = mlKit.translate(word)
 
-                    val out = mlKit.translate(word)
-                    out
-                }
-            } catch (e: TimeoutCancellationException) {
-                Log.e("LanguageRepo", "translate: ML Kit operation timed out for '$word'")
-                throw Exception("Translation timed out")
-            }
+            db.translationDao().insert(
+                TranslationEntity(
+                    source = word,
+                    sourceLang = sourceLang,
+                    targetLang = targetLang,
+                    translatedText = translated,
+                    timestamp = System.currentTimeMillis()
+                )
+            )
 
-            Log.d("LanguageRepo", "translate: ML Kit result for '$word' -> '$translated'")
-            // cache and return
-            dao.insert(TranslationEntity(source = word, sourceLang = resolvedSource, targetLang = resolvedTarget, translatedText = translated, timestamp = System.currentTimeMillis()))
-            return translated
+            translated
+        } catch (e: TimeoutCancellationException) {
+            Log.e("LanguageRepo", "Translation timed out for '$word'")
+            throw Exception("Translation timed out")
         } catch (e: Exception) {
-            Log.e("LanguageRepo", "translate: ML Kit translation failed for '$word': ${e.message}")
+            Log.e("LanguageRepo", "Translation failed for '$word': ${e.message}")
             throw e
         }
     }

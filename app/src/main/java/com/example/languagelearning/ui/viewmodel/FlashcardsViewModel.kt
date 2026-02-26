@@ -3,7 +3,9 @@ package com.example.languagelearning.ui.viewmodel
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.languagelearning.data.ExampleSentence
 import com.example.languagelearning.data.Flashcard
+import com.example.languagelearning.data.FlashcardTagCrossRef
 import com.example.languagelearning.data.LanguageRepository
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -37,45 +39,30 @@ class FlashcardsViewModel(private val repo: LanguageRepository, private val cate
 
     fun addFlashcard(word: String, exampleSentences: List<String>, tags: List<String>) = viewModelScope.launch {
         _isSaving.value = true
-        val category = _category.value
-        val sourceLang = category?.foreignLanguage ?: "de"
-        val targetLang = category?.targetLanguage ?: "en"
+        val category = _category.value ?: return@launch // Guard clause if no category selected
 
         try {
-            val translated = try {
-                val TIMEOUT_MS = 15_000L
-                val result = try {
-                    withTimeout(TIMEOUT_MS) {
-                        repo.translate(word, sourceLang, targetLang)
-                    }
-                } catch (_: TimeoutCancellationException) {
-                    Log.e("FlashcardsVM", "translation timed out for '$word'")
-                    throw Exception("Translation timed out")
-                }
-                Log.d("FlashcardsVM", "translation success: '$word' -> '$result'")
-                result
-            } catch (e: Exception) {
-                Log.e("FlashcardsVM", "translation failed: ${e.message}", e)
-                events.emit(FlashcardEvent.Error("Translation failed: ${e.message ?: "Unknown error"}. Flashcard not saved."))
-                _isSaving.value = false
-                return@launch
+            val translated = withTimeout(15_000L) {
+                repo.translate(word, category.foreignLanguage, category.targetLanguage)
             }
 
             val flashcard = Flashcard(categoryId = categoryId, word = word, translation = translated)
             val id = repo.insertFlashcard(flashcard)
-            Log.d("FlashcardsVM", "inserted flashcard id=$id with translation=${translated}")
 
-            for (ex in exampleSentences) {
-                repo.insertExample(com.example.languagelearning.data.ExampleSentence(flashcardId = id, text = ex))
+            exampleSentences.forEach { text ->
+                repo.insertExample(ExampleSentence(flashcardId = id, text = text))
             }
-            for (tagName in tags) {
+
+            tags.forEach { tagName ->
                 val tag = repo.getOrCreateTagByName(tagName)
-                repo.insertTagCrossRef(com.example.languagelearning.data.FlashcardTagCrossRef(flashcardId = id, tagId = tag.id))
+                repo.insertTagCrossRef(FlashcardTagCrossRef(flashcardId = id, tagId = tag.id))
             }
 
             events.emit(FlashcardEvent.Success(id))
         } catch (e: Exception) {
-            events.emit(FlashcardEvent.Error(e.message ?: "Failed to add flashcard"))
+            val errorMsg = if (e is TimeoutCancellationException) "Translation timed out" else e.message
+            Log.e("FlashcardsVM", "Failed to add flashcard: $errorMsg", e)
+            events.emit(FlashcardEvent.Error(errorMsg ?: "Unknown error"))
         } finally {
             _isSaving.value = false
         }
@@ -92,20 +79,18 @@ class FlashcardsViewModel(private val repo: LanguageRepository, private val cate
 
         try {
             _isSaving.value = true
-            val updatedFlashcard = if (fetchTranslation) {
-                val t = try { repo.translate(flashcard.word, sourceLang, targetLang) } catch (_: Exception) { flashcard.translation }
-                flashcard.copy(translation = t)
-            } else flashcard
+            var updatedFlashcard = flashcard
 
-            repo.updateFlashcard(updatedFlashcard)
-            repo.deleteExamplesForFlashcard(flashcard.id)
-            for (ex in examples) repo.insertExample(com.example.languagelearning.data.ExampleSentence(flashcardId = flashcard.id, text = ex))
-
-            repo.clearTagsForFlashcard(flashcard.id)
-            for (tagName in tags) {
-                val tag = repo.getOrCreateTagByName(tagName)
-                repo.insertTagCrossRef(com.example.languagelearning.data.FlashcardTagCrossRef(flashcardId = flashcard.id, tagId = tag.id))
+            if (fetchTranslation) {
+                val result = try {
+                    repo.translate(flashcard.word, sourceLang, targetLang)
+                } catch (e: Exception) {
+                    flashcard.translation
+                }
+                updatedFlashcard = flashcard.copy(translation = result)
             }
+
+            repo.updateFlashcardWithDetails(updatedFlashcard, examples, tags)
 
             events.emit(FlashcardEvent.Success(flashcard.id))
         } catch (e: Exception) {
